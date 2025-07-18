@@ -1228,6 +1228,7 @@
     
     // GPS 위치 추적
     let gpsWatchId = null;
+    let lastUpdateTime = 0;
     
     function startGPS() {
       console.log('GPS 추적 시작...');
@@ -1240,8 +1241,9 @@
       gpsWatchId = navigator.geolocation.watchPosition(pos => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
+        const now = Date.now();
         
-        console.log(`GPS 업데이트: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+        console.log(`GPS 업데이트: ${lat.toFixed(6)}, ${lon.toFixed(6)} (시간: ${new Date(now).toLocaleTimeString()})`);
         
         // 방향 분석
         const direction = analyzeDirection(lat, lon);
@@ -1253,6 +1255,7 @@
         // 이전 위치 업데이트 (방향 분석 후에 업데이트)
         previousLat = lat;
         previousLon = lon;
+        lastUpdateTime = now;
         
         // 가장 가까운 정류소 찾기
         let nearestStation = null;
@@ -1266,7 +1269,7 @@
           }
         });
         
-        locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'})`;
+        locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'}) [${new Date(now).toLocaleTimeString()}]`;
         
         // 디버깅을 위한 로그 추가
         console.log(`현재 거리: ${minDistance.toFixed(0)}m, 목표 반경: ${targetRadius}m, 현재 디스플레이: ${currentDisplay}, 가장 가까운 정류소: ${nearestStation.name}, 방향: ${currentDirection}`);
@@ -1289,39 +1292,52 @@
         console.warn('GPS error:', err);
         locationDisplay.textContent = `GPS 오류: ${err.message}`;
       }, { 
-        enableHighAccuracy: true,
-        maximumAge: 1000, // 1초 이내의 위치 정보만 사용
-        timeout: 5000 // 5초 타임아웃
+        enableHighAccuracy: true, // 정확도 높임
+        maximumAge: 0, // 항상 새로운 위치 정보 사용
+        timeout: 15000 // 15초 타임아웃
       });
     }
     
     // 주기적 GPS 업데이트 (백업용)
     function startPeriodicGPS() {
       setInterval(() => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(pos => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            console.log(`주기적 GPS 업데이트: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-            
-            // 위치 표시 업데이트
-            let nearestStation = null;
-            let minDistance = Infinity;
-            
-            stations.forEach(station => {
-              const distance = calculateDistance(lat, lon, station.lat, station.lon);
-              if (distance < minDistance) {
-                minDistance = distance;
-                nearestStation = station;
+        const now = Date.now();
+        // 마지막 업데이트로부터 10초가 지났으면 강제 업데이트
+        if (now - lastUpdateTime > 10000) {
+          console.log('10초 이상 업데이트 없음 - 강제 GPS 요청');
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+              const lat = pos.coords.latitude;
+              const lon = pos.coords.longitude;
+              console.log(`강제 GPS 업데이트: ${lat.toFixed(6)}, ${lon.toFixed(6)} (시간: ${new Date(now).toLocaleTimeString()})`);
+              
+              // 위치 표시 업데이트
+              let nearestStation = null;
+              let minDistance = Infinity;
+              
+              stations.forEach(station => {
+                const distance = calculateDistance(lat, lon, station.lat, station.lon);
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  nearestStation = station;
+                }
+              });
+              
+              locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'}) [강제: ${new Date(now).toLocaleTimeString()}]`;
+              lastUpdateTime = now;
+            }, err => {
+              // 타임아웃 오류는 조용히 무시 (너무 자주 로그가 나오지 않도록)
+              if (err.code !== 3) { // 3 = TIMEOUT
+                console.warn('강제 GPS 오류:', err.message);
               }
+            }, { 
+              enableHighAccuracy: false, // 정확도 요구사항 완화
+              timeout: 10000, // 타임아웃 시간 증가
+              maximumAge: 30000 // 30초 이내의 위치 정보 허용
             });
-            
-            locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'})`;
-          }, err => {
-            console.warn('주기적 GPS 오류:', err);
-          }, { enableHighAccuracy: true, timeout: 5000 });
+          }
         }
-      }, 3000); // 3초마다 업데이트
+      }, 3000); // 3초마다 체크
     }
     
     // GPS 시작
@@ -1346,10 +1362,56 @@
           locationDisplay.textContent = 'GPS 권한 요청 중...';
         } else if (result.state === 'granted') {
           locationDisplay.textContent = 'GPS 권한 허용됨 - 위치 추적 중...';
+          // 권한이 허용되면 즉시 위치 가져오기 시도
+          getCurrentLocation();
         }
+      }).catch(err => {
+        console.error('GPS 권한 확인 오류:', err);
+        locationDisplay.textContent = 'GPS 권한 확인 실패';
       });
       
       return true;
+    }
+    
+    // 현재 위치 가져오기 함수
+    function getCurrentLocation() {
+      console.log('현재 위치 가져오기 시도...');
+      locationDisplay.textContent = '위치 가져오는 중...';
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            console.log(`현재 위치 성공: ${lat}, ${lon}`);
+            
+            // 위치 표시 업데이트
+            let nearestStation = null;
+            let minDistance = Infinity;
+            
+            stations.forEach(station => {
+              const distance = calculateDistance(lat, lon, station.lat, station.lon);
+              if (distance < minDistance) {
+                minDistance = distance;
+                nearestStation = station;
+              }
+            });
+            
+            locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'})`;
+          },
+          err => {
+            console.error('현재 위치 가져오기 실패:', err);
+            locationDisplay.textContent = `GPS 오류: ${err.message} (코드: ${err.code})`;
+          },
+          { 
+            enableHighAccuracy: false, 
+            timeout: 15000,
+            maximumAge: 60000 // 1분 이내의 위치 정보 허용
+          }
+        );
+      } else {
+        locationDisplay.textContent = 'GPS 지원 안됨';
+      }
     }
     
     // GPS 상태 확인
@@ -1533,17 +1595,7 @@
     gpsManualBtn.style.cssText = 'padding: 10px 15px; background: #ff8800; color: white; border: 2px solid #cc6600; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
     gpsManualBtn.onclick = () => {
       console.log('GPS 수동 설정 버튼 클릭');
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          console.log(`수동 GPS 위치: ${lat}, ${lon}`);
-          locationDisplay.textContent = `수동 위치: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-        }, err => {
-          console.error('GPS 수동 설정 실패:', err);
-          locationDisplay.textContent = `GPS 오류: ${err.message}`;
-        }, { enableHighAccuracy: true, timeout: 10000 });
-      }
+      getCurrentLocation();
     };
     
     const gpsStatusBtn = document.createElement('button');
