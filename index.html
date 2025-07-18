@@ -92,9 +92,9 @@
     .location-display {
       position: fixed;
       top: 20px;
-      left: 200px;
+      left: 20px;
       color: #333;
-      font-size: 20px;
+      font-size: 18px;
       font-family: monospace;
       z-index: 10;
       background: rgba(255,255,255,0.95);
@@ -103,6 +103,7 @@
       white-space: nowrap;
       border: 2px solid #666;
       box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      max-width: 500px;
     }
     
     /* 두 번째 디스플레이 스타일 */
@@ -1456,7 +1457,7 @@
     const audioBtn = document.createElement('button');
     audioBtn.id = 'audioBtn';
     audioBtn.textContent = '🔊 오디오 활성화';
-    audioBtn.style.cssText = 'position: fixed; top: 20px; left: 20px; z-index: 1000; padding: 10px 15px; background: #44aa44; color: white; border: 2px solid #228822; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold;';
+    audioBtn.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1000; padding: 10px 15px; background: #44aa44; color: white; border: 2px solid #228822; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold;';
     audioBtn.onclick = () => {
       if (!userInteracted) {
         userInteracted = true;
