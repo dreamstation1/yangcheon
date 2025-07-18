@@ -61,6 +61,16 @@
       justify-content: center;
       align-items: center;
     }
+    
+    /* 모바일에서만 굵게 표시 */
+    @media (max-width: 768px) {
+      .title {
+        font-weight: bold;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      }
+    }
     .title span { margin: 0 100px; }
     .scroll-text {
       position: absolute;
@@ -71,6 +81,16 @@
       z-index: 1;
       display: none;
       transform: translateX(0);
+    }
+    
+    /* 모바일에서만 굵게 표시 */
+    @media (max-width: 768px) {
+      .scroll-text {
+        font-weight: bold;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      }
     }
     .yellow { color: yellow; }
     .orange { color: orange; }
@@ -85,6 +105,16 @@
       z-index: 1;
       display: none;
       white-space: nowrap;
+    }
+    
+    /* 모바일에서만 굵게 표시 */
+    @media (max-width: 768px) {
+      .third-top, .third-bottom, .fourth-top, .fourth-bottom {
+        font-weight: bold;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      }
     }
     .third-top { top: 20px; }
     .third-bottom { bottom: 20px; }
@@ -120,6 +150,16 @@
       white-space: nowrap;
       display: none;
     }
+    
+    /* 모바일에서만 굵게 표시 */
+    @media (max-width: 768px) {
+      .top-label {
+        font-weight: bold;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      }
+    }
     .scroll-lcd {
       position: absolute;
       top: 50%;
@@ -131,6 +171,16 @@
       z-index: 1;
       left: 0;
       display: none;
+    }
+    
+    /* 모바일에서만 굵게 표시 */
+    @media (max-width: 768px) {
+      .scroll-lcd {
+        font-weight: bold;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      }
     }
     .center-line {
       position: absolute;
