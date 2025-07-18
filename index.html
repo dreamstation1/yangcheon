@@ -1476,6 +1476,29 @@
     const testBtnContainer = document.createElement('div');
     testBtnContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; max-width: 400px;';
     
+    // 모바일에서 가로 배치로 변경
+    const mobileStyle = `
+      @media (max-width: 768px) {
+        #testBtnContainer {
+          flex-direction: row !important;
+          flex-wrap: wrap !important;
+          max-width: 90vw !important;
+          gap: 5px !important;
+          top: 10px !important;
+          right: 10px !important;
+        }
+        #testBtnContainer button {
+          font-size: 12px !important;
+          padding: 8px 10px !important;
+          max-width: 120px !important;
+        }
+      }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = mobileStyle;
+    document.head.appendChild(styleSheet);
+    
     // 목동야구장 테스트 버튼
     const mokStadiumTestBtn = document.createElement('button');
     mokStadiumTestBtn.textContent = '🔊 목동야구장 안내 시작';
@@ -1663,6 +1686,7 @@
     
     testBtnContainer.appendChild(gpsManualBtn);
     testBtnContainer.appendChild(gpsStatusBtn);
+    testBtnContainer.id = 'testBtnContainer'; // ID 추가
     document.body.appendChild(testBtnContainer);
     
     // 추가로 오디오 활성화 버튼도 표시
