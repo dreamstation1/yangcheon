@@ -4,13 +4,14 @@
   <meta charset="UTF-8">
   <title>버스 안내 전광판 (통합)</title>
   <style>
-    @font-face {
+    /* 폰트 로딩 실패 시 대체 폰트만 사용 */
+    /* @font-face {
       font-family: 'HY견고딕';
       src: url('HY견고딕.ttf') format('truetype');
       font-display: swap;
       font-weight: normal;
       font-style: normal;
-    }
+    } */
     
     /* 폰트 로딩 실패 시 대체 폰트 */
     .font-fallback {
@@ -1325,7 +1326,9 @@
     
     // GPS 시작
     startGPS();
-    startPeriodicGPS(); // 주기적 GPS 업데이트도 시작
+    
+    // 주기적 GPS 업데이트 시작
+    startPeriodicGPS();
     
     // GPS 상태 확인 및 수동 위치 설정 기능
     function checkGPSStatus() {
