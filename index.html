@@ -1226,59 +1226,69 @@
     }
     
     // GPS 위치 추적
-    navigator.geolocation.watchPosition(pos => {
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
+    function startGPS() {
+      console.log('GPS 추적 시작...');
       
-      // 방향 분석
-      const direction = analyzeDirection(lat, lon);
-      if (direction !== 'unknown') {
-        currentDirection = direction;
-        console.log(`방향 분석: ${direction === 'up' ? '상행(당산→목동)' : '하행(목동→당산)'}`);
-      }
-      
-      // 이전 위치 업데이트 (방향 분석 후에 업데이트)
-      previousLat = lat;
-      previousLon = lon;
-      
-      // 가장 가까운 정류소 찾기
-      let nearestStation = null;
-      let minDistance = Infinity;
-      
-      stations.forEach(station => {
-        const distance = calculateDistance(lat, lon, station.lat, station.lon);
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestStation = station;
+      navigator.geolocation.watchPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        
+        console.log(`GPS 업데이트: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+        
+        // 방향 분석
+        const direction = analyzeDirection(lat, lon);
+        if (direction !== 'unknown') {
+          currentDirection = direction;
+          console.log(`방향 분석: ${direction === 'up' ? '상행(당산→목동)' : '하행(목동→당산)'}`);
         }
+        
+        // 이전 위치 업데이트 (방향 분석 후에 업데이트)
+        previousLat = lat;
+        previousLon = lon;
+        
+        // 가장 가까운 정류소 찾기
+        let nearestStation = null;
+        let minDistance = Infinity;
+        
+        stations.forEach(station => {
+          const distance = calculateDistance(lat, lon, station.lat, station.lon);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestStation = station;
+          }
+        });
+        
+        locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'})`;
+        
+        // 디버깅을 위한 로그 추가
+        console.log(`현재 거리: ${minDistance.toFixed(0)}m, 목표 반경: ${targetRadius}m, 현재 디스플레이: ${currentDisplay}, 가장 가까운 정류소: ${nearestStation.name}, 방향: ${currentDirection}`);
+        
+        // 목표 위치 100m 이내에 있고, 현재 안내 문구 모드일 때 자동으로 정류소 안내 시작
+        if (minDistance <= targetRadius && currentDisplay === 1 && isAnnouncementComplete && lastAnnouncedStation !== nearestStation.name) {
+          console.log(`${nearestStation.name} 근처 도착! (거리: ${minDistance.toFixed(0)}m) 자동으로 정류소 안내 시작`);
+          lastAnnouncedStation = nearestStation.name;
+          isAnnouncementComplete = false;
+          startStationAnnouncement(nearestStation);
+        }
+        
+        // 100m 밖으로 나가면 안내 문구로 돌아가기 (디버깅용)
+        if (minDistance > targetRadius && currentDisplay === 2) {
+          console.log(`정류소에서 멀어짐! (거리: ${minDistance.toFixed(0)}m) 안내 문구로 돌아가기`);
+          // 주의: 이 기능은 테스트용이므로 실제 사용 시에는 주석 처리하세요
+          // switchToDisplay1();
+        }
+      }, err => {
+        console.warn('GPS error:', err);
+        locationDisplay.textContent = `GPS 오류: ${err.message}`;
+      }, { 
+        enableHighAccuracy: true,
+        maximumAge: 0, // 항상 새로운 위치 정보 사용
+        timeout: 10000 // 10초 타임아웃
       });
-      
-      locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'})`;
-      
-      // 디버깅을 위한 로그 추가
-      console.log(`현재 거리: ${minDistance.toFixed(0)}m, 목표 반경: ${targetRadius}m, 현재 디스플레이: ${currentDisplay}, 가장 가까운 정류소: ${nearestStation.name}, 방향: ${currentDirection}`);
-      
-      // 목표 위치 100m 이내에 있고, 현재 안내 문구 모드일 때 자동으로 정류소 안내 시작
-      if (minDistance <= targetRadius && currentDisplay === 1 && isAnnouncementComplete && lastAnnouncedStation !== nearestStation.name) {
-        console.log(`${nearestStation.name} 근처 도착! (거리: ${minDistance.toFixed(0)}m) 자동으로 정류소 안내 시작`);
-        lastAnnouncedStation = nearestStation.name;
-        isAnnouncementComplete = false;
-        startStationAnnouncement(nearestStation);
-      }
-      
-      // 100m 밖으로 나가면 안내 문구로 돌아가기 (디버깅용)
-      if (minDistance > targetRadius && currentDisplay === 2) {
-        console.log(`정류소에서 멀어짐! (거리: ${minDistance.toFixed(0)}m) 안내 문구로 돌아가기`);
-        // 주의: 이 기능은 테스트용이므로 실제 사용 시에는 주석 처리하세요
-        // switchToDisplay1();
-      }
-    }, err => {
-      console.warn('GPS error:', err);
-    }, { 
-      enableHighAccuracy: true,
-      maximumAge: 1000, // 1초 이내의 위치 정보만 사용
-      timeout: 5000 // 5초 타임아웃
-    });
+    }
+    
+    // GPS 시작
+    startGPS();
 
     // 테스트 버튼들 생성
     const testBtnContainer = document.createElement('div');
