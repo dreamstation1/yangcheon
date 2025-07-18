@@ -1226,10 +1226,17 @@
     }
     
     // GPS 위치 추적
+    let gpsWatchId = null;
+    
     function startGPS() {
       console.log('GPS 추적 시작...');
       
-      navigator.geolocation.watchPosition(pos => {
+      // 기존 watchPosition 정지
+      if (gpsWatchId) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+      }
+      
+      gpsWatchId = navigator.geolocation.watchPosition(pos => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         
@@ -1282,13 +1289,68 @@
         locationDisplay.textContent = `GPS 오류: ${err.message}`;
       }, { 
         enableHighAccuracy: true,
-        maximumAge: 0, // 항상 새로운 위치 정보 사용
-        timeout: 10000 // 10초 타임아웃
+        maximumAge: 1000, // 1초 이내의 위치 정보만 사용
+        timeout: 5000 // 5초 타임아웃
       });
+    }
+    
+    // 주기적 GPS 업데이트 (백업용)
+    function startPeriodicGPS() {
+      setInterval(() => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(pos => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            console.log(`주기적 GPS 업데이트: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+            
+            // 위치 표시 업데이트
+            let nearestStation = null;
+            let minDistance = Infinity;
+            
+            stations.forEach(station => {
+              const distance = calculateDistance(lat, lon, station.lat, station.lon);
+              if (distance < minDistance) {
+                minDistance = distance;
+                nearestStation = station;
+              }
+            });
+            
+            locationDisplay.textContent = `위치: ${lat.toFixed(6)}, ${lon.toFixed(6)} (가장 가까운 정류소: ${nearestStation.name} ${minDistance.toFixed(0)}m, 방향: ${currentDirection === 'up' ? '상행' : currentDirection === 'down' ? '하행' : '불명'})`;
+          }, err => {
+            console.warn('주기적 GPS 오류:', err);
+          }, { enableHighAccuracy: true, timeout: 5000 });
+        }
+      }, 3000); // 3초마다 업데이트
     }
     
     // GPS 시작
     startGPS();
+    startPeriodicGPS(); // 주기적 GPS 업데이트도 시작
+    
+    // GPS 상태 확인 및 수동 위치 설정 기능
+    function checkGPSStatus() {
+      if (!navigator.geolocation) {
+        console.error('이 브라우저는 GPS를 지원하지 않습니다.');
+        locationDisplay.textContent = 'GPS 지원 안됨';
+        return false;
+      }
+      
+      navigator.permissions.query({name: 'geolocation'}).then(result => {
+        console.log('GPS 권한 상태:', result.state);
+        if (result.state === 'denied') {
+          locationDisplay.textContent = 'GPS 권한 거부됨 - 브라우저 설정에서 위치 권한을 허용해주세요';
+        } else if (result.state === 'prompt') {
+          locationDisplay.textContent = 'GPS 권한 요청 중...';
+        } else if (result.state === 'granted') {
+          locationDisplay.textContent = 'GPS 권한 허용됨 - 위치 추적 중...';
+        }
+      });
+      
+      return true;
+    }
+    
+    // GPS 상태 확인
+    checkGPSStatus();
 
     // 테스트 버튼들 생성
     const testBtnContainer = document.createElement('div');
@@ -1461,6 +1523,36 @@
     testBtnContainer.appendChild(directionUpBtn);
     testBtnContainer.appendChild(directionDownBtn);
     testBtnContainer.appendChild(audioTestBtn);
+    
+    // GPS 수동 설정 버튼들 추가
+    const gpsManualBtn = document.createElement('button');
+    gpsManualBtn.textContent = '📍 GPS 수동 설정';
+    gpsManualBtn.style.cssText = 'padding: 10px 15px; background: #ff8800; color: white; border: 2px solid #cc6600; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
+    gpsManualBtn.onclick = () => {
+      console.log('GPS 수동 설정 버튼 클릭');
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          console.log(`수동 GPS 위치: ${lat}, ${lon}`);
+          locationDisplay.textContent = `수동 위치: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        }, err => {
+          console.error('GPS 수동 설정 실패:', err);
+          locationDisplay.textContent = `GPS 오류: ${err.message}`;
+        }, { enableHighAccuracy: true, timeout: 10000 });
+      }
+    };
+    
+    const gpsStatusBtn = document.createElement('button');
+    gpsStatusBtn.textContent = '🔍 GPS 상태 확인';
+    gpsStatusBtn.style.cssText = 'padding: 10px 15px; background: #0088ff; color: white; border: 2px solid #0066cc; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);';
+    gpsStatusBtn.onclick = () => {
+      console.log('GPS 상태 확인 버튼 클릭');
+      checkGPSStatus();
+    };
+    
+    testBtnContainer.appendChild(gpsManualBtn);
+    testBtnContainer.appendChild(gpsStatusBtn);
     document.body.appendChild(testBtnContainer);
     
     // 추가로 오디오 활성화 버튼도 표시
